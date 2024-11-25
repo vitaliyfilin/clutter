@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:converters="clr-namespace:Clutter.Converters"
+             xmlns:models="clr-namespace:Clutter.Models"
+             xmlns:viewModels="clr-namespace:Clutter.ViewModels"
+             x:DataType="viewModels:ChatPageViewModel"
+             x:Class="Clutter.ChatPage"
+             BackgroundColor="Black"
+             NavigationPage.HasNavigationBar="False">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+            <converters:BoolToLayoutOptionsConverter x:Key="BoolToLayoutOptionsConverter" />
+            <converters:IsEmptyConverter x:Key="IsEmptyConverter" />
+            <converters:IsNotEmptyConverter x:Key="IsNotEmptyConverter" />
+
+            <DataTemplate x:Key="MessageTemplate" x:DataType="models:MessageModel">
+                <Frame Padding="10" CornerRadius="20"
+                       BackgroundColor="{Binding IsIncoming, Converter={StaticResource BoolToColorConverter}}"
+                       HorizontalOptions="{Binding IsIncoming, Converter={StaticResource BoolToLayoutOptionsConverter}}"
+                       Margin="10, 6, 10, 6"
+                       BorderColor="Transparent"
+                       MaximumWidthRequest="300">
+                    <StackLayout Spacing="4">
+                        <Label Text="{Binding Content}"
+                               FontFamily="Rubik"
+                               FontSize="15"
+                               LineBreakMode="WordWrap"
+                               LineHeight="1.2" />
+                        <Label Text="{Binding CurrentTime, Mode=OneTime}"
+                               FontSize="8"
+                               FontFamily="Rubik"
+                               HorizontalOptions="End" />
+                    </StackLayout>
+                </Frame>
+            </DataTemplate>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ContentPage.Content>
+
+        <Grid>
+            <!-- Define rows for the NavBar, Message List, and Message Entry -->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />   <!-- NavBar -->
+                <RowDefinition Height="*" />      <!-- Message List (fills remaining space) -->
+                <RowDefinition Height="Auto" />   <!-- Message Entry -->
+            </Grid.RowDefinitions>
+
+            <!-- Custom NavBar in the first row -->
+            <Grid Grid.Row="0"
+                  BackgroundColor="#B0FF0E"
+                  Padding="5,10,5,5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Name and Status Section -->
+                <StackLayout Orientation="Vertical" HorizontalOptions="Center" VerticalOptions="Center" Grid.Row="0">
+                    <!-- Name Label -->
+                    <Label Text="Vitaly!"
+                           FontFamily="RubikBeastly"
+                           FontSize="30"
+                           TextColor="Black"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           Margin="0,0,0,5" /> <!-- Margin to create space between name and status -->
+
+                    <!-- Status Label -->
+                    <Label Text="Online"
+                           FontSize="12"
+                           FontFamily="Rubik"
+                           TextColor="Gray"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </StackLayout>
+            </Grid>
+
+            <!-- Background and Message List in the second row -->
+            <Grid Grid.Row="1">
+                <Image Source="rectangle1.png"
+                       Aspect="AspectFill"
+                       Opacity="0.5" />
+                <CollectionView x:Name="MessagesList"
+                                ItemsSource="{Binding Messages}"
+                                Margin="0,5,0,0"
+                                ItemTemplate="{StaticResource MessageTemplate}" />
+            </Grid>
+
+            <!-- Telegram Style Message Entry in the third row -->
+            <Grid Grid.Row="2"
+                  Padding="5"
+                  BackgroundColor="#B0FF0E"
+                  HeightRequest="60">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+
+                <!-- Rounded entry for typing messages -->
+                <Frame Padding="0"
+                       CornerRadius="20"
+                       BorderColor="Transparent"
+                       BackgroundColor="White"
+                       HasShadow="False"
+                       VerticalOptions="Center"
+                       Grid.Column="1">
+                    <Entry x:Name="MessageEntry"
+                           Text="{Binding NewMessage, Mode=TwoWay}"
+                           Placeholder="Message"
+                           x:DataType="viewModels:ChatPageViewModel"
+                           Keyboard="Text"
+                           FontFamily="Rubik"
+                           FontSize="14"
+                           VerticalOptions="Center"
+                           BackgroundColor="Transparent"
+                           Margin="10,0" />
+                </Frame>
+
+                <!-- Send button or microphone icon -->
+                <Grid Grid.Column="2" VerticalOptions="Center">
+                    <Button Text=">"
+                            x:DataType="viewModels:ChatPageViewModel"
+                            Command="{Binding SendMessageCommand}"
+                            CommandParameter="{Binding Text, Source={x:Reference MessageEntry}}"
+                            VerticalOptions="Center"
+                            IsVisible="{Binding NewMessage, Converter={StaticResource IsNotEmptyConverter}}" />
+                </Grid>
+            </Grid>
+
+            <!-- Spinner for message sending -->
+            <ActivityIndicator
+                Grid.Row="1"
+                x:DataType="viewModels:ChatPageViewModel"
+                IsVisible="{Binding IsSendingMessage}"
+                IsRunning="{Binding IsSendingMessage}"
+                Color="Gray"
+                VerticalOptions="End"
+                HorizontalOptions="Center"
+                BackgroundColor="Transparent"
+                Opacity="0.8" />
+        </Grid>
+
+    </ContentPage.Content>
+
+</ContentPage>
