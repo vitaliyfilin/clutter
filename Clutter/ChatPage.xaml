@@ -14,6 +14,9 @@
         <ResourceDictionary>
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToLayoutOptionsConverter" />
+            <converters:BoolToLayoutOptionsConverter x:Key="BoolToFontSizeConverter" />
+            <converters:BoolToLayoutOptionsConverter x:Key="BoolToTextColorConverter" />
+            <converters:BoolToLayoutOptionsConverter x:Key="BoolToVisibilityConverter" />
             <converters:IsEmptyConverter x:Key="IsEmptyConverter" />
             <converters:IsNotEmptyConverter x:Key="IsNotEmptyConverter" />
 
@@ -27,16 +30,19 @@
                     <StackLayout Spacing="4">
                         <Label Text="{Binding Content}"
                                FontFamily="Rubik"
-                               FontSize="15"
+                               FontSize="{Binding IsSystemMessage, Converter={StaticResource BoolToFontSizeConverter}}"
                                LineBreakMode="WordWrap"
-                               LineHeight="1.2" />
-                        <Label Text="{Binding CurrentTime, Mode=OneTime}"
+                               LineHeight="1.2"
+                               TextColor="White" />
+                        <Label Text="{Binding Timestamp, StringFormat='{0:T}'}"
                                FontSize="8"
                                FontFamily="Rubik"
-                               HorizontalOptions="End" />
+                               HorizontalOptions="End"
+                               IsVisible="{Binding IsSystemMessage, Converter={StaticResource BoolToVisibilityConverter}}" />
                     </StackLayout>
                 </Frame>
             </DataTemplate>
+
         </ResourceDictionary>
     </ContentPage.Resources>
 
@@ -69,13 +75,6 @@
                            VerticalOptions="Center"
                            Margin="0,0,0,5" /> <!-- Margin to create space between name and status -->
 
-                    <!-- Status Label -->
-                    <Label Text="Online"
-                           FontSize="12"
-                           FontFamily="Rubik"
-                           TextColor="Gray"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center" />
                 </StackLayout>
             </Grid>
 

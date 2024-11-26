@@ -44,9 +44,8 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
 
         Messages = new ObservableCollection<MessageModel>();
         ScanDevicesPeriodically(new CancellationToken());
-        
     }
-    
+
     [ICommand]
     private async void ScanDevicesPeriodically(CancellationToken cancellationToken)
     {
@@ -88,14 +87,20 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             .ConfigureAwait(false);
     }
 
-    private async void OnDeviceConnectionLost(object? sender, DeviceEventArgs e)
+    private async void OnDeviceDisconnected(object? sender, DeviceEventArgs e)
     {
         var disconnectedDevice = e.Device;
         Devices.Remove(disconnectedDevice);
 
-        await MainThread.InvokeOnMainThreadAsync(async () =>
+        await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            await Toast.Make($"Device disconnected: {disconnectedDevice.Name}").Show();
+            Messages.Add(new MessageModel
+            {
+                Content = $"{disconnectedDevice.Name} disconnected.",
+                IsSystemMessage = true,
+                IsIncoming = null,
+                Timestamp = null
+            });
         });
 
         if (disconnectedDevice.IsConnectable)
@@ -103,39 +108,57 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             await ReconnectToDeviceAsync(disconnectedDevice);
         }
     }
+
+    private async void OnDeviceConnectionLost(object? sender, DeviceEventArgs e)
+    {
+        var disconnectedDevice = e.Device;
+        Devices.Remove(disconnectedDevice);
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            Messages.Add(new MessageModel
+            {
+                Content = $"{disconnectedDevice.Name} connection lost.",
+                IsSystemMessage = true,
+                IsIncoming = null,
+                Timestamp = null
+            });
+        });
+
+        if (disconnectedDevice.IsConnectable)
+        {
+            await ReconnectToDeviceAsync(disconnectedDevice);
+        }
+    }
+
     private async void OnDeviceDiscovered(object? sender, DeviceEventArgs args)
     {
         var device = args.Device;
 
-        // Ensure the device isn't already connected or listed
         if (Devices.Any(d => d.Id == device.Id)) return;
 
         try
         {
             await ConnectToDeviceAsync(device);
             Devices.Add(device);
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                Messages.Add(new MessageModel
+                {
+                    Content = $"{device.Name} connected.",
+                    IsSystemMessage = true,
+                    IsIncoming = null,
+                    Timestamp = null
+                });
+            });
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to connect to discovered device: {ex.Message}");
         }
     }
-    private async void OnDeviceDisconnected(object? sender, DeviceEventArgs e)
-    {
-        var disconnectedDevice = e.Device;
-        Devices.Remove(disconnectedDevice);
 
-        await MainThread.InvokeOnMainThreadAsync(async () =>
-        {
-            await Toast.Make($"Device disconnected: {disconnectedDevice.Name}").Show();
-        });
-
-        // Check if the device is reconnectable
-        if (disconnectedDevice.IsConnectable)
-        {
-            await ReconnectToDeviceAsync(disconnectedDevice);
-        }
-    }
 
     private async Task ReconnectToDeviceAsync(IDevice device)
     {
@@ -151,7 +174,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             Console.WriteLine($"Failed to reconnect to device: {device.Name}. Error: {ex.Message}");
         }
     }
-    
+
     private async Task ConnectToDevicesAsync()
     {
         foreach (var device in Devices)
@@ -230,7 +253,8 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             Messages.Add(new MessageModel
             {
                 Content = fullMessage,
-                IsIncoming = true
+                IsIncoming = true,
+                IsSystemMessage = null
             });
         }
     }
@@ -252,7 +276,8 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             Messages.Add(new MessageModel
             {
                 Content = NewMessage,
-                IsIncoming = false
+                IsIncoming = false,
+                IsSystemMessage = null
             });
 
             NewMessage = string.Empty;

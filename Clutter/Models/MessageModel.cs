@@ -1,8 +1,9 @@
 ﻿namespace Clutter.Models;
 
-public sealed class MessageModel
+public class MessageModel
 {
     public string? Content { get; set; }
-    public bool IsIncoming { get; set; }
-    public string CurrentTime { get; set; } = DateTime.Now.ToString("HH:mm");
+    public bool? IsIncoming { get; set; }
+    public DateTime? Timestamp { get; set; } = DateTime.Now;
+    public bool? IsSystemMessage { get; set; } // New property for system messages
 }

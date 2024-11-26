@@ -12,7 +12,7 @@ public sealed class BoolToLayoutOptionsConverter : IValueConverter
             return isIncoming ? LayoutOptions.Start : LayoutOptions.End;
         }
 
-        return LayoutOptions.Start; // Default to Start if the value is not a bool
+        return LayoutOptions.Center; // Default to Start if the value is not a bool
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter,
