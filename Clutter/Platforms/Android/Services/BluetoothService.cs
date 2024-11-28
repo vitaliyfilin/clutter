@@ -60,7 +60,7 @@ public sealed class BluetoothService : IBluetoothService
         var bluetoothAdapter = _manager?.Adapter;
         _advertiser = bluetoothAdapter?.BluetoothLeAdvertiser;
 
-        bluetoothAdapter?.SetName("Vitaly");
+        bluetoothAdapter?.SetName("Daria");
 
         var advertisementData = new AdvertiseData.Builder()
             .AddServiceUuid(new ParcelUuid(ChatServiceUuid))

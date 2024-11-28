@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Text;
+using Clutter.Helpers;
 using Clutter.Models;
 using Clutter.Services;
 using CommunityToolkit.Maui.Alerts;
@@ -17,7 +18,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
     private static readonly Guid _myUuidSecure = Guid.Parse("fa87c0d0-afac-11de-8a39-0800200c9a66");
 
     private readonly IBluetoothService _bluetoothService;
-    private List<IDevice> Devices { get; }
+    private HashSet<IDevice> Devices { get; }
     private readonly IAdapter _adapter;
     private ICharacteristic? _chatCharacteristic;
 
@@ -26,15 +27,14 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
     [ObservableProperty] private string? _name;
     [ObservableProperty] private bool? _isSendingMessage;
     [ObservableProperty] private double _progress;
-
-    private List<string> _buffer = new();
-    private StringBuilder _combinedMessage = new();
-    private int MaxChunkSize; // Max BLE chunk size is usually 20 bytes
+    private readonly CharacteristicQueue _characteristicQueue;
+    private readonly StringBuilder _combinedMessage = new();
 
     public ChatPageViewModel(
         IBluetoothService bluetoothService)
     {
         Devices = [];
+        _characteristicQueue = new CharacteristicQueue();
         _bluetoothService = bluetoothService;
         _bluetoothService.MessageReceived += OnMessageReceived;
 
@@ -58,22 +58,18 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Console.WriteLine($"Error during scanning: {ex.Message}");
-                // Continue scanning even after an error
             }
 
             try
             {
-                // Delay for 10 seconds, unless cancellation is requested
-                await Task.Delay(10_000, cancellationToken);
+                await Task.Delay(5_000, cancellationToken);
             }
             catch (OperationCanceledException)
             {
-                // Gracefully exit the loop if the user cancels
                 break;
             }
         }
     }
-
 
     private async Task ScanDevices(CancellationToken cancellationToken)
     {
@@ -96,45 +92,39 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         {
             Messages.Add(new MessageModel
             {
+                Name = e.Device.Name,
                 Content = $"{disconnectedDevice.Name} disconnected.",
                 IsSystemMessage = true,
                 IsIncoming = null,
-                Timestamp = null
+                Timestamp = null,
+                IsAvatarVisible = false
             });
         });
-
-        if (disconnectedDevice.IsConnectable)
-        {
-            await ReconnectToDeviceAsync(disconnectedDevice);
-        }
     }
 
     private async void OnDeviceConnectionLost(object? sender, DeviceEventArgs e)
     {
         var disconnectedDevice = e.Device;
+        disconnectedDevice.Dispose();
         Devices.Remove(disconnectedDevice);
 
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
             Messages.Add(new MessageModel
             {
+                Name = e.Device.Name,
                 Content = $"{disconnectedDevice.Name} connection lost.",
                 IsSystemMessage = true,
                 IsIncoming = null,
-                Timestamp = null
+                Timestamp = null,
+                IsAvatarVisible = false
             });
         });
-
-        if (disconnectedDevice.IsConnectable)
-        {
-            await ReconnectToDeviceAsync(disconnectedDevice);
-        }
     }
 
     private async void OnDeviceDiscovered(object? sender, DeviceEventArgs args)
     {
         var device = args.Device;
-
         if (Devices.Any(d => d.Id == device.Id)) return;
 
         try
@@ -146,32 +136,18 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             {
                 Messages.Add(new MessageModel
                 {
+                    Name = device.Name,
                     Content = $"{device.Name} connected.",
                     IsSystemMessage = true,
                     IsIncoming = null,
-                    Timestamp = null
+                    Timestamp = null,
+                    IsAvatarVisible = false
                 });
             });
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to connect to discovered device: {ex.Message}");
-        }
-    }
-
-
-    private async Task ReconnectToDeviceAsync(IDevice device)
-    {
-        try
-        {
-            if (device.State == DeviceState.Connected) return;
-
-            await ConnectToDeviceAsync(device);
-            await Toast.Make($"Reconnected to device: {device.Name}").Show();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to reconnect to device: {device.Name}. Error: {ex.Message}");
         }
     }
 
@@ -189,6 +165,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         if (device.State is DeviceState.Connected or DeviceState.Connecting) return;
         if (_adapter.ConnectedDevices.Contains(device)) return;
         if (Devices.Any(d => d.Id == device.Id)) return;
+        if (device.Name is null || string.IsNullOrWhiteSpace(device.Name)) return;
 
         try
         {
@@ -211,7 +188,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         }
         catch (Exception e)
         {
-            await Toast.Make(e.Message).Show();
+            await Toast.Make($"Exception: {e}, {e.Message}").Show();
         }
     }
 
@@ -222,42 +199,38 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             var mtu = await device.RequestMtuAsync(requestValue);
             mtu -= (int)(mtu * 0.05); // Subtract 5% of MTU
             await Toast.Make($"Adjusted MTU size: {mtu}").Show();
-            return mtu;
+            return mtu > 0 ? mtu : 20;
         }
 
         return 100;
     }
 
-    private async void OnMessageReceived(string message, string deviceAddress)
+    private void OnMessageReceived(string message, string deviceAddress)
     {
-        // Add the incoming message chunk to the buffer
-        _buffer.Add(message);
+        var spanMessage = message.AsSpan();
+        var endMark = "^".AsSpan();
+        var device = Devices.FirstOrDefault(x => GuidHelper.GuidToMacAddress(x.Id) == deviceAddress);
 
-        // Check if the message ends with '^' (text) or '~' (file)
-        if (message.EndsWith('^'))
+        _combinedMessage.Append(spanMessage);
+
+        if (!spanMessage.EndsWith(endMark)) return;
+        var fullMessage = _combinedMessage.ToString().TrimEnd();
+        _combinedMessage.Clear();
+
+        // Verify the message source and display it
+        // var macAddress = GuidHelper.GuidToMacAddress(Device.Id);
+        // if (deviceAddress != macAddress) return;
+
+        Messages.Add(new MessageModel
         {
-            // Text message logic
-            foreach (var chunk in _buffer)
-            {
-                _combinedMessage.Append(chunk);
-            }
-
-            var fullMessage = _combinedMessage.ToString().TrimEnd('^'); // Remove the '^' marker
-            _buffer.Clear();
-            _combinedMessage.Clear();
-
-            // Verify the message source and display it
-            // var macAddress = GuidHelper.GuidToMacAddress(Device.Id);
-            // if (deviceAddress != macAddress) return;
-
-            Messages.Add(new MessageModel
-            {
-                Content = fullMessage,
-                IsIncoming = true,
-                IsSystemMessage = null
-            });
-        }
+            Name = device.Name,
+            Content = fullMessage,
+            IsIncoming = true,
+            IsSystemMessage = false,
+            IsAvatarVisible = true
+        });
     }
+
 
     [ICommand]
     private async Task SendMessageAsync()
@@ -275,16 +248,18 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
 
             Messages.Add(new MessageModel
             {
+                Name = "Me",
                 Content = NewMessage,
                 IsIncoming = false,
-                IsSystemMessage = null
+                IsSystemMessage = false,
+                IsAvatarVisible = true
             });
 
             NewMessage = string.Empty;
         }
         catch (Exception e)
         {
-            await Toast.Make(e.Message).Show();
+            await Toast.Make($"Exception: {e}, {e.Message}").Show();
         }
         finally
         {
@@ -292,39 +267,58 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         }
     }
 
+
     private async Task Send(byte[] fileContents)
     {
-        var result = await RequestMtuAsync(255);
+        var result = 100;
+        await _characteristicQueue.EnqueueRequest(async () => { result = await RequestMtuAsync(512); });
 
         if (fileContents.Length == 0) return;
 
         var bytesAlreadySent = 0;
-        var bytesRemaining = fileContents.Length - bytesAlreadySent;
+        var bytesRemaining = fileContents.Length;
 
         while (bytesRemaining > 0)
         {
+            // Safeguard: Ensure blockLength is within safe limits
             var blockLength = Math.Min(bytesRemaining, result);
+
+            // Prevent overflow when allocating the byte array
+            if (blockLength is <= 0 or > int.MaxValue)
+            {
+                Console.WriteLine("Block length is invalid: " + blockLength);
+                break;
+            }
+
             var blockView = new byte[blockLength];
-            Array.Copy(fileContents, bytesAlreadySent, blockView, 0, blockLength);
 
             try
             {
-                await _chatCharacteristic?.WriteAsync(blockView)!;
+                Array.Copy(fileContents, bytesAlreadySent, blockView, 0, blockLength);
+
+                await _characteristicQueue.EnqueueRequest(async () =>
+                {
+                    await _chatCharacteristic.WriteAsync(blockView);
+                });
+
                 bytesRemaining -= blockLength;
 
-                Progress = (double)bytesAlreadySent / fileContents.Length;
+                // Ensure there's no division by zero in progress calculation
+                if (fileContents.Length > 0)
+                {
+                    Progress = (double)bytesAlreadySent / fileContents.Length;
+                }
 
                 Console.WriteLine($"File block written - {bytesRemaining} bytes remaining");
                 bytesAlreadySent += blockLength;
             }
             catch (Exception e)
             {
-                Console.WriteLine($"File block write error with {bytesRemaining} bytes remaining: {e.Message}");
+                Console.WriteLine($"Error with block write: {e.Message} | Bytes remaining: {bytesRemaining}");
                 break;
             }
         }
     }
-
 
     // private async void Characteristic_ValueUpdated(object sender, CharacteristicUpdatedEventArgs args)
     // {

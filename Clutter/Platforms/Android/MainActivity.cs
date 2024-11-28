@@ -41,7 +41,7 @@ public class MainActivity : MauiAppCompatActivity
         // Make the navigation bar transparent
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
         {
-            Window.SetNavigationBarColor(Color.ParseColor("#B0FF0E"));
+            Window.SetNavigationBarColor(Color.ParseColor("#000000"));
         }
 
         // Remove Entry control underline

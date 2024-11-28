@@ -5,40 +5,69 @@
              xmlns:converters="clr-namespace:Clutter.Converters"
              xmlns:models="clr-namespace:Clutter.Models"
              xmlns:viewModels="clr-namespace:Clutter.ViewModels"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:DataType="viewModels:ChatPageViewModel"
              x:Class="Clutter.ChatPage"
              BackgroundColor="Black"
              NavigationPage.HasNavigationBar="False">
+    
+    <ContentPage.Behaviors>
+        <toolkit:StatusBarBehavior StatusBarColor="Black" StatusBarStyle="LightContent" />
+    </ContentPage.Behaviors>
+
 
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToLayoutOptionsConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToFontSizeConverter" />
-            <converters:BoolToLayoutOptionsConverter x:Key="BoolToTextColorConverter" />
+            <converters:BoolToLayoutOptionsConverter x:Key="BoolToTextColorConverter"  />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToVisibilityConverter" />
             <converters:IsEmptyConverter x:Key="IsEmptyConverter" />
             <converters:IsNotEmptyConverter x:Key="IsNotEmptyConverter" />
 
             <DataTemplate x:Key="MessageTemplate" x:DataType="models:MessageModel">
                 <Frame Padding="10" CornerRadius="20"
-                       BackgroundColor="{Binding IsIncoming, Converter={StaticResource BoolToColorConverter}}"
+                       BackgroundColor="Transparent"
                        HorizontalOptions="{Binding IsIncoming, Converter={StaticResource BoolToLayoutOptionsConverter}}"
                        Margin="10, 6, 10, 6"
                        BorderColor="Transparent"
                        MaximumWidthRequest="300">
-                    <StackLayout Spacing="4">
-                        <Label Text="{Binding Content}"
-                               FontFamily="Rubik"
-                               FontSize="{Binding IsSystemMessage, Converter={StaticResource BoolToFontSizeConverter}}"
-                               LineBreakMode="WordWrap"
-                               LineHeight="1.2"
-                               TextColor="White" />
-                        <Label Text="{Binding Timestamp, StringFormat='{0:T}'}"
-                               FontSize="8"
-                               FontFamily="Rubik"
-                               HorizontalOptions="End"
-                               IsVisible="{Binding IsSystemMessage, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <StackLayout Orientation="Horizontal" Spacing="10">
+                        <!-- Circle with Name Binding on the left side -->
+                        <Frame
+                            WidthRequest="50" 
+                               HeightRequest="50" 
+                               Padding="0" 
+                               IsVisible="{Binding IsAvatarVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='False'}"
+                               HorizontalOptions="Start"
+                               BorderColor="Transparent" 
+                               BackgroundColor="Gray" 
+                               CornerRadius="25">
+                            <Label Text="{Binding Name}" 
+                                   HorizontalTextAlignment="Center" 
+                                   BackgroundColor="{Binding IsIncoming, Converter={StaticResource BoolToColorConverter}}"
+                                   VerticalTextAlignment="Center" 
+                                   FontFamily="Rubik"
+                                   TextColor="White" />
+                        </Frame>
+
+
+                        <!-- Message Content and Timestamp -->
+                        <StackLayout Spacing="4" HorizontalOptions="FillAndExpand">
+                            <Label Text="{Binding Content}"
+                                   FontFamily="Rubik"
+                                   FontSize="{Binding IsSystemMessage, Converter={StaticResource BoolToFontSizeConverter}}"
+                                   LineBreakMode="WordWrap"
+                                   LineHeight="1.2"
+                                   TextColor="White" />
+                            <Label Text="{Binding Timestamp, StringFormat='{0:T}'}"
+                                   FontSize="8"
+                                   FontFamily="Rubik"
+                                   TextColor="White"
+                                   HorizontalOptions="End"
+                                   IsVisible="{Binding IsSystemMessage, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        </StackLayout>
                     </StackLayout>
                 </Frame>
             </DataTemplate>
@@ -58,7 +87,7 @@
 
             <!-- Custom NavBar in the first row -->
             <Grid Grid.Row="0"
-                  BackgroundColor="#B0FF0E"
+                  BackgroundColor="#000000"
                   Padding="5,10,5,5">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -67,10 +96,10 @@
                 <!-- Name and Status Section -->
                 <StackLayout Orientation="Vertical" HorizontalOptions="Center" VerticalOptions="Center" Grid.Row="0">
                     <!-- Name Label -->
-                    <Label Text="Vitaly!"
+                    <Label Text="Me"
                            FontFamily="RubikBeastly"
                            FontSize="30"
-                           TextColor="Black"
+                           TextColor="White"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
                            Margin="0,0,0,5" /> <!-- Margin to create space between name and status -->
@@ -92,7 +121,7 @@
             <!-- Telegram Style Message Entry in the third row -->
             <Grid Grid.Row="2"
                   Padding="5"
-                  BackgroundColor="#B0FF0E"
+                  BackgroundColor="#000000"
                   HeightRequest="60">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
