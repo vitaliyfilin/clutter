@@ -10,7 +10,7 @@
              x:Class="Clutter.ChatPage"
              BackgroundColor="Black"
              NavigationPage.HasNavigationBar="False">
-    
+
     <ContentPage.Behaviors>
         <toolkit:StatusBarBehavior StatusBarColor="Black" StatusBarStyle="LightContent" />
     </ContentPage.Behaviors>
@@ -21,7 +21,7 @@
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToLayoutOptionsConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToFontSizeConverter" />
-            <converters:BoolToLayoutOptionsConverter x:Key="BoolToTextColorConverter"  />
+            <converters:BoolToLayoutOptionsConverter x:Key="BoolToTextColorConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToVisibilityConverter" />
             <converters:IsEmptyConverter x:Key="IsEmptyConverter" />
             <converters:IsNotEmptyConverter x:Key="IsNotEmptyConverter" />
@@ -36,18 +36,18 @@
                     <StackLayout Orientation="Horizontal" Spacing="10">
                         <!-- Circle with Name Binding on the left side -->
                         <Frame
-                            WidthRequest="50" 
-                               HeightRequest="50" 
-                               Padding="0" 
-                               IsVisible="{Binding IsAvatarVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='False'}"
-                               HorizontalOptions="Start"
-                               BorderColor="Transparent" 
-                               BackgroundColor="Gray" 
-                               CornerRadius="25">
-                            <Label Text="{Binding Name}" 
-                                   HorizontalTextAlignment="Center" 
+                            WidthRequest="50"
+                            HeightRequest="50"
+                            Padding="0"
+                            IsVisible="{Binding IsAvatarVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='False'}"
+                            HorizontalOptions="Start"
+                            BorderColor="Transparent"
+                            BackgroundColor="Gray"
+                            CornerRadius="25">
+                            <Label Text="{Binding Name}"
+                                   HorizontalTextAlignment="Center"
                                    BackgroundColor="{Binding IsIncoming, Converter={StaticResource BoolToColorConverter}}"
-                                   VerticalTextAlignment="Center" 
+                                   VerticalTextAlignment="Center"
                                    FontFamily="Rubik"
                                    TextColor="White" />
                         </Frame>
@@ -129,7 +129,6 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-
                 <!-- Rounded entry for typing messages -->
                 <Frame Padding="0"
                        CornerRadius="20"
@@ -138,16 +137,37 @@
                        HasShadow="False"
                        VerticalOptions="Center"
                        Grid.Column="1">
-                    <Entry x:Name="MessageEntry"
-                           Text="{Binding NewMessage, Mode=TwoWay}"
-                           Placeholder="Message"
-                           x:DataType="viewModels:ChatPageViewModel"
-                           Keyboard="Text"
-                           FontFamily="Rubik"
-                           FontSize="14"
-                           VerticalOptions="Center"
-                           BackgroundColor="Transparent"
-                           Margin="10,0" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Entry for typing messages -->
+                        <Entry x:Name="MessageEntry"
+                               Text="{Binding NewMessage, Mode=TwoWay}"
+                               Placeholder="Message"
+                               x:DataType="viewModels:ChatPageViewModel"
+                               Keyboard="Text"
+                               FontFamily="Rubik"
+                               FontSize="14"
+                               VerticalOptions="Center"
+                               BackgroundColor="Transparent"
+                               Margin="10,0"
+                               Grid.Column="0" />
+
+                        <!-- Spinner for message sending -->
+                        <ActivityIndicator
+                            IsVisible="{Binding IsSendingMessage}"
+                            IsRunning="{Binding IsSendingMessage}"
+                            Color="Gray"
+                            VerticalOptions="Center"
+                            HorizontalOptions="End"
+                            Grid.Column="1"
+                            WidthRequest="25"
+                            HeightRequest="25"
+                            Margin="5,0" />
+                    </Grid>
                 </Frame>
 
                 <!-- Send button or microphone icon -->
@@ -160,18 +180,6 @@
                             IsVisible="{Binding NewMessage, Converter={StaticResource IsNotEmptyConverter}}" />
                 </Grid>
             </Grid>
-
-            <!-- Spinner for message sending -->
-            <ActivityIndicator
-                Grid.Row="1"
-                x:DataType="viewModels:ChatPageViewModel"
-                IsVisible="{Binding IsSendingMessage}"
-                IsRunning="{Binding IsSendingMessage}"
-                Color="Gray"
-                VerticalOptions="End"
-                HorizontalOptions="Center"
-                BackgroundColor="Transparent"
-                Opacity="0.8" />
         </Grid>
 
     </ContentPage.Content>

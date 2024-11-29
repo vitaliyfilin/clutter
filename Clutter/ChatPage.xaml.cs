@@ -8,15 +8,16 @@ namespace Clutter;
 
 public partial class ChatPage
 {
-    public ChatPage(IBluetoothService bluetoothService)
+    public ChatPage(IBluetoothService bluetoothService, IConnectionService connectionService,
+        IMessagingService messagingService, ISoundService soundService)
     {
         InitializeComponent();
 
-        var viewModel = new ChatPageViewModel(bluetoothService);
+        var viewModel = new ChatPageViewModel(bluetoothService, connectionService, messagingService, soundService);
         BindingContext = viewModel;
 
         // Scroll to the latest message when a new message is added
-        viewModel.Messages.CollectionChanged += Messages_CollectionChanged;
+        if (viewModel.Messages != null) viewModel.Messages.CollectionChanged += Messages_CollectionChanged;
     }
 
     private void Messages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

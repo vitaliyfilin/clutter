@@ -1,4 +1,5 @@
-﻿using Clutter.Services;
+﻿using Clutter.Helpers;
+using Clutter.Services;
 using Clutter.ViewModels;
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
@@ -17,8 +18,6 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
-                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 fonts.AddFont("Rubik-Regular.ttf", "Rubik");
                 fonts.AddFont("RubikBeastly-Regular", "RubikBeastly");
             });
@@ -29,8 +28,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<ChatPage>();
         builder.Services.AddSingleton<ChatPageViewModel>();
         builder.Services.AddSingleton<IBluetoothService, BluetoothService>();
+        builder.Services.AddSingleton<IMessagingService, MessagingService>();
+        builder.Services.AddSingleton<IConnectionService, ConnectionService>();
         builder.Services.AddSingleton<IBluetoothLE>(CrossBluetoothLE.Current);
         builder.Services.AddSingleton<IAdapter>(CrossBluetoothLE.Current.Adapter);
+        builder.Services.AddSingleton<ISoundService, SoundService>();
 
         var app = builder.Build();
         ServiceHelper.Initialize(app.Services);

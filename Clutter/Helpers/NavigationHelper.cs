@@ -1,8 +1,8 @@
 ﻿using CommunityToolkit.Maui.Views;
 
-namespace Clutter.Services;
+namespace Clutter.Helpers;
 
-public static class NavigationService
+public static class NavigationHelper
 {
     public static async Task NavigateToAsync(Page? page)
     {

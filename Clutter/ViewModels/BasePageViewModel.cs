@@ -1,4 +1,4 @@
-﻿using Clutter.Services;
+﻿using Clutter.Helpers;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -9,6 +9,6 @@ public partial class BasePageViewModel : ObservableObject
     [ICommand]
     private static async void GoBack(string message)
     {
-        await NavigationService.NavigateBackAsync();
+        await NavigationHelper.NavigateBackAsync();
     }
 }

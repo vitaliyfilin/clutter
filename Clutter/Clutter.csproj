@@ -78,6 +78,24 @@
       <Compile Update="Platforms\Windows\Services\BluetoothService.cs">
         <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
       </Compile>
+      <Compile Update="Platforms\MacCatalyst\Services\MessagingService.cs">
+        <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
+      </Compile>
+      <Compile Update="Platforms\Windows\Services\MessagingService.cs">
+        <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
+      </Compile>
+      <Compile Update="Platforms\MacCatalyst\Services\ConnectionService.cs">
+        <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
+      </Compile>
+      <Compile Update="Platforms\Windows\Services\ConnectionService.cs">
+        <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
+      </Compile>
+      <Compile Update="Platforms\MacCatalyst\Services\SoundService.cs">
+        <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
+      </Compile>
+      <Compile Update="Platforms\Windows\Services\SoundService.cs">
+        <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
+      </Compile>
     </ItemGroup>
 
 </Project>

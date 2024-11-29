@@ -1,8 +1,8 @@
-﻿namespace Clutter.Services;
+﻿namespace Clutter.Helpers;
 
 public static class ServiceHelper
 {
-    private static IServiceProvider? Services { get; set; }
+    private static IServiceProvider Services { get; set; } = null!;
 
     public static void Initialize(IServiceProvider serviceProvider) => Services = serviceProvider;
 

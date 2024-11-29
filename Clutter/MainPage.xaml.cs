@@ -1,4 +1,5 @@
-﻿using Clutter.Services;
+﻿using Clutter.Helpers;
+using Clutter.Services;
 
 namespace Clutter;
 
@@ -15,7 +16,7 @@ public partial class MainPage : ContentPage
     private async void OnGoOnlineClicked(object? sender, EventArgs e)
     {
         await FallAsync();
-        await NavigationService.NavigateToAsync(ServiceHelper.GetService<ChatPage>());
+        await NavigationHelper.NavigateToAsync(ServiceHelper.GetService<ChatPage>());
         IsBusy = true;
     }
 

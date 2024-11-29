@@ -4,14 +4,13 @@ using Android.Bluetooth.LE;
 using Android.Content;
 using Android.OS;
 using Java.Util;
-using Plugin.BLE.Abstractions.Contracts;
 using Application = Android.App.Application;
 
 namespace Clutter.Services;
 
 public sealed class BluetoothService : IBluetoothService
 {
-    private const GattProperty Properties = GattProperty.Read | GattProperty.WriteNoResponse | GattProperty.Notify;
+    private const GattProperty Properties = GattProperty.Read | GattProperty.Write | GattProperty.Notify;
     private const GattPermission Permissions = GattPermission.Read | GattPermission.Write;
 
     private static readonly UUID?
@@ -22,23 +21,21 @@ public sealed class BluetoothService : IBluetoothService
 
     public event Action<string, string>? MessageReceived;
     private readonly GattServerCallback _gattServerCallback;
-    private readonly BluetoothManager? _manager;
-    private readonly IAdapter _adapter;
+    private readonly BluetoothManager? _bluetoothManager;
 
     private BluetoothGattCharacteristic? _bluetoothGattCharacteristic;
     private BluetoothGattService? _bluetoothGattService;
-    private ICharacteristic? _chatCharacteristic;
-    private BluetoothLeAdvertiser? _advertiser;
-    private BluetoothGattServer? _gattServer;
+    private BluetoothLeAdvertiser? _bluetoothLeAdvertiser;
+    private BluetoothGattServer? _bluetoothGattServer;
 
-    // Store messages for each device session
     private readonly Dictionary<string, List<string>> _deviceMessages = new();
 
-    public BluetoothService(IAdapter adapter)
+    public BluetoothService()
     {
-        _manager = (BluetoothManager)Application.Context.GetSystemService(Context.BluetoothService)!;
+        StopAdvertisingAndDispose();
+
+        _bluetoothManager = (BluetoothManager)Application.Context.GetSystemService(Context.BluetoothService)!;
         _gattServerCallback = new GattServerCallback(bluetoothService: this);
-        _adapter = adapter;
 
         InitializeGattServer();
         StartAdvertising();
@@ -46,24 +43,29 @@ public sealed class BluetoothService : IBluetoothService
 
     private void InitializeGattServer()
     {
-        _gattServer = _manager?.OpenGattServer(Application.Context, new GattServerCallback(this));
+        _bluetoothGattServer = _bluetoothManager?.OpenGattServer(Application.Context, new GattServerCallback(this));
         _bluetoothGattService = new BluetoothGattService(ChatServiceUuid, GattServiceType.Primary);
         _bluetoothGattCharacteristic =
             new BluetoothGattCharacteristic(ChatCharacteristicUuid, properties: Properties, permissions: Permissions);
 
         _bluetoothGattService.AddCharacteristic(_bluetoothGattCharacteristic);
-        _gattServer?.AddService(_bluetoothGattService);
+        _bluetoothGattServer?.AddService(_bluetoothGattService);
     }
 
     public async void StartAdvertising()
     {
-        var bluetoothAdapter = _manager?.Adapter;
-        _advertiser = bluetoothAdapter?.BluetoothLeAdvertiser;
+        var bluetoothAdapter = _bluetoothManager?.Adapter;
+        _bluetoothLeAdvertiser = bluetoothAdapter?.BluetoothLeAdvertiser;
 
         bluetoothAdapter?.SetName("Daria");
+        var emoji = "😊"; // Example emoji
+        var emojiBytes = Encoding.UTF8.GetBytes(emoji); // Convert emoji to UTF-8 bytes
+
+        var manufacturerId = 0x1234; 
 
         var advertisementData = new AdvertiseData.Builder()
             .AddServiceUuid(new ParcelUuid(ChatServiceUuid))
+            ?.AddManufacturerData(manufacturerId, emojiBytes) // Add emoji as manufacturer data
             ?.SetIncludeDeviceName(true)
             ?.Build();
 
@@ -73,7 +75,31 @@ public sealed class BluetoothService : IBluetoothService
             ?.SetConnectable(true)
             ?.Build();
 
-        _advertiser?.StartAdvertising(settings, advertisementData, new MyAdvertiseCallback());
+        _bluetoothLeAdvertiser?.StartAdvertising(settings, advertisementData, new MyAdvertiseCallback());
+    }
+    
+    
+    public void StopAdvertisingAndDispose()
+    {
+        try
+        {
+            // Stop advertising
+            _bluetoothLeAdvertiser?.StopAdvertising(new MyAdvertiseCallback());
+
+            // Close the GATT server
+            _bluetoothGattServer?.ClearServices();
+            _bluetoothGattServer?.Close();
+
+            // Nullify the references to allow garbage collection
+            _bluetoothGattServer = null;
+            _bluetoothGattCharacteristic = null;
+            _bluetoothGattService = null;
+            _bluetoothLeAdvertiser = null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during Bluetooth cleanup: {ex.Message}");
+        }
     }
 
     public List<string?> GetConnectedDevices()
@@ -123,27 +149,36 @@ public sealed class BluetoothService : IBluetoothService
             int offset,
             byte[]? value)
         {
-            if (characteristic?.Uuid != ChatCharacteristicUuid || device == null || value == null)
-                return;
-
-            var receivedMessage = Encoding.UTF8.GetString(value);
-
-            // Notify UI or relevant listeners
-            _bluetoothService.MessageReceived?.Invoke(receivedMessage, device.Address);
-
-            // Broadcast message to all connected devices except the sender
-            foreach (var targetDevice in _connectedDevices)
+            try
             {
-                if (targetDevice.Address == device.Address) continue; // Skip the sender
+                if (characteristic?.Uuid != ChatCharacteristicUuid || device == null || value == null)
+                    return;
+
+                var receivedMessage = Encoding.UTF8.GetString(value);
+
+                // Notify UI or relevant listeners
+                _bluetoothService.MessageReceived?.Invoke(receivedMessage, device.Address);
+
+                // Broadcast message to all connected devices except the sender
+                foreach (var targetDevice in _connectedDevices)
+                {
+                    if (targetDevice.Address == device.Address) continue; // Skip the sender
 #pragma warning disable CA1422
-                characteristic?.SetValue(value);
-                _bluetoothService._gattServer?.NotifyCharacteristicChanged(targetDevice, characteristic, false);
+                    characteristic?.SetValue(value);
+                    _bluetoothService._bluetoothGattServer?.NotifyCharacteristicChanged(targetDevice, characteristic,
+                        false);
 #pragma warning restore CA1422
-            }
+                }
 
-            if (responseNeeded)
+                if (responseNeeded)
+                {
+                    _bluetoothService._bluetoothGattServer?.SendResponse(device, requestId, GattStatus.Success, 0,
+                        value);
+                }
+            }
+            catch (Exception ex)
             {
-                _bluetoothService._gattServer?.SendResponse(device, requestId, GattStatus.Success, 0, value);
+                Console.WriteLine($"Error: {ex.Message}");
             }
         }
     }
