@@ -58,14 +58,9 @@ public sealed class BluetoothService : IBluetoothService
         _bluetoothLeAdvertiser = bluetoothAdapter?.BluetoothLeAdvertiser;
 
         bluetoothAdapter?.SetName("Daria");
-        var emoji = "😊"; // Example emoji
-        var emojiBytes = Encoding.UTF8.GetBytes(emoji); // Convert emoji to UTF-8 bytes
-
-        var manufacturerId = 0x1234; 
 
         var advertisementData = new AdvertiseData.Builder()
             .AddServiceUuid(new ParcelUuid(ChatServiceUuid))
-            ?.AddManufacturerData(manufacturerId, emojiBytes) // Add emoji as manufacturer data
             ?.SetIncludeDeviceName(true)
             ?.Build();
 
