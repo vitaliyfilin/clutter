@@ -17,7 +17,7 @@ public sealed class SoundService : ISoundService
         await PlaySoundFromAssetAsync("received.wav");
     }
 
-    private async Task PlaySoundFromAssetAsync(string fileName)
+    private static async Task PlaySoundFromAssetAsync(string fileName)
     {
         try
         {
@@ -31,7 +31,7 @@ public sealed class SoundService : ISoundService
             }
 
             var mediaPlayer = new MediaPlayer();
-            mediaPlayer.SetDataSource(tempFilePath);
+            await mediaPlayer.SetDataSourceAsync(tempFilePath);
 
             mediaPlayer.Prepare();
 

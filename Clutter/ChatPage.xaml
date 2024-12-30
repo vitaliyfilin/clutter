@@ -21,40 +21,24 @@
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToLayoutOptionsConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToFontSizeConverter" />
-            <converters:BoolToLayoutOptionsConverter x:Key="BoolToTextColorConverter" />
             <converters:BoolToLayoutOptionsConverter x:Key="BoolToVisibilityConverter" />
-            <converters:IsEmptyConverter x:Key="IsEmptyConverter" />
             <converters:IsNotEmptyConverter x:Key="IsNotEmptyConverter" />
 
             <DataTemplate x:Key="MessageTemplate" x:DataType="models:MessageModel">
                 <Frame Padding="10" CornerRadius="20"
-                       BackgroundColor="Transparent"
+                       BackgroundColor="{Binding IsIncoming, Converter={StaticResource BoolToColorConverter}}"
                        HorizontalOptions="{Binding IsIncoming, Converter={StaticResource BoolToLayoutOptionsConverter}}"
-                       Margin="10, 6, 10, 6"
+                       Margin="8, 6, 8, 6"
                        BorderColor="Transparent"
                        MaximumWidthRequest="300">
                     <StackLayout Orientation="Horizontal" Spacing="10">
-                        <!-- Circle with Name Binding on the left side -->
-                        <Frame
-                            WidthRequest="50"
-                            HeightRequest="50"
-                            Padding="0"
-                            IsVisible="{Binding IsAvatarVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='False'}"
-                            HorizontalOptions="Start"
-                            BorderColor="Transparent"
-                            BackgroundColor="Gray"
-                            CornerRadius="25">
+                        <StackLayout Spacing="3" HorizontalOptions="FillAndExpand">
                             <Label Text="{Binding Name}"
-                                   HorizontalTextAlignment="Center"
-                                   BackgroundColor="{Binding IsIncoming, Converter={StaticResource BoolToColorConverter}}"
-                                   VerticalTextAlignment="Center"
+                                   FontSize="8"
                                    FontFamily="Rubik"
-                                   TextColor="White" />
-                        </Frame>
-
-
-                        <!-- Message Content and Timestamp -->
-                        <StackLayout Spacing="4" HorizontalOptions="FillAndExpand">
+                                   TextColor="White"
+                                   HorizontalOptions="Start"
+                                   IsVisible="{Binding IsSystemMessage, Converter={StaticResource BoolToVisibilityConverter}}" />
                             <Label Text="{Binding Content}"
                                    FontFamily="Rubik"
                                    FontSize="{Binding IsSystemMessage, Converter={StaticResource BoolToFontSizeConverter}}"
@@ -78,14 +62,12 @@
     <ContentPage.Content>
 
         <Grid>
-            <!-- Define rows for the NavBar, Message List, and Message Entry -->
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />   <!-- NavBar -->
-                <RowDefinition Height="*" />      <!-- Message List (fills remaining space) -->
-                <RowDefinition Height="Auto" />   <!-- Message Entry -->
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Custom NavBar in the first row -->
             <Grid Grid.Row="0"
                   BackgroundColor="#000000"
                   Padding="5,10,5,5">
@@ -93,21 +75,18 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Name and Status Section -->
                 <StackLayout Orientation="Vertical" HorizontalOptions="Center" VerticalOptions="Center" Grid.Row="0">
-                    <!-- Name Label -->
                     <Label Text="Me"
                            FontFamily="RubikBeastly"
                            FontSize="30"
                            TextColor="White"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
-                           Margin="0,0,0,5" /> <!-- Margin to create space between name and status -->
+                           Margin="0,0,0,5" />
 
                 </StackLayout>
             </Grid>
 
-            <!-- Background and Message List in the second row -->
             <Grid Grid.Row="1">
                 <Image Source="rectangle1.png"
                        Aspect="AspectFill"
@@ -118,7 +97,6 @@
                                 ItemTemplate="{StaticResource MessageTemplate}" />
             </Grid>
 
-            <!-- Telegram Style Message Entry in the third row -->
             <Grid Grid.Row="2"
                   Padding="5"
                   BackgroundColor="#000000"
@@ -129,7 +107,6 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Rounded entry for typing messages -->
                 <Frame Padding="0"
                        CornerRadius="20"
                        BorderColor="Transparent"
@@ -143,10 +120,9 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- Entry for typing messages -->
                         <Entry x:Name="MessageEntry"
                                Text="{Binding NewMessage, Mode=TwoWay}"
-                               Placeholder="Message"
+                               Placeholder="Say something..."
                                x:DataType="viewModels:ChatPageViewModel"
                                Keyboard="Text"
                                FontFamily="Rubik"
@@ -156,7 +132,6 @@
                                Margin="10,0"
                                Grid.Column="0" />
 
-                        <!-- Spinner for message sending -->
                         <ActivityIndicator
                             IsVisible="{Binding IsSendingMessage}"
                             IsRunning="{Binding IsSendingMessage}"
@@ -170,7 +145,6 @@
                     </Grid>
                 </Frame>
 
-                <!-- Send button or microphone icon -->
                 <Grid Grid.Column="2" VerticalOptions="Center">
                     <Button Text=">"
                             x:DataType="viewModels:ChatPageViewModel"

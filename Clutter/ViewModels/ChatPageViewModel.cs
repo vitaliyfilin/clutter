@@ -7,38 +7,19 @@ using Clutter.Services;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Plugin.BLE;
 using Plugin.BLE.Abstractions;
 using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
+using static Plugin.BLE.CrossBluetoothLE;
 
 namespace Clutter.ViewModels;
 
 public sealed partial class ChatPageViewModel : BasePageViewModel
 {
-    private static readonly List<string> ConnectedAlternatives =
-    [
-        "Decided to grace us with their presence",
-        "Made a cameo appearance",
-        "Beamed into our orbit",
-        "Tapped into the collective",
-        "Stepped into the void",
-        "Wandered into the party",
-    ];
-
-    private static readonly List<string> DisconnectedAlternatives =
-    [
-        "Decided the grass was greener elsewhere",
-        "Ghosted us all",
-        "Pulled the plug on the fun",
-        "Left without leaving a forwarding address",
-        "Evacuated the chat premises",
-        "Took an unannounced leave of absence",
-    ];
+    #region Fields and Properties
 
     private static readonly Guid MyUuidSecure = Guid.Parse("fa87c0d0-afac-11de-8a39-0800200c9a66");
     private readonly ConcurrentDictionary<string, StringBuilder> _deviceMessageBuffers = new();
-    private const string Me = "Me";
     private HashSet<IDevice> Devices { get; }
     private readonly IAdapter _adapter;
 
@@ -52,26 +33,35 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
     private readonly IMessagingService _messagingService;
     private readonly ISoundService _soundService;
 
+    #endregion
+
+    #region Constructor
+
     public ChatPageViewModel(
-        IBluetoothService bluetoothService, IConnectionService connectionService, IMessagingService messagingService, ISoundService soundService)
+        IBluetoothService bluetoothService, 
+        IConnectionService connectionService, 
+        IMessagingService messagingService,
+        ISoundService soundService)
     {
-        Devices = [];
+        Devices = new HashSet<IDevice>();
         Messages = new ObservableCollection<MessageModel>();
         _bluetoothService = bluetoothService;
         _connectionService = connectionService;
         _messagingService = messagingService;
         _soundService = soundService;
-        _adapter = CrossBluetoothLE.Current.Adapter;
+        _adapter = Current.Adapter;
+        
         _bluetoothService.MessageReceived += OnMessageReceived;
         _adapter.DeviceDisconnected += OnDeviceDisconnected;
         _adapter.DeviceConnectionLost += OnDeviceDisconnected;
+        _adapter.DeviceDiscovered += OnDeviceDiscovered;
 
-        ScanDevicesPeriodically(new CancellationToken());
+        ScanDevicesPeriodically(new CancellationTokenSource().Token);
     }
 
-    private void OnCharacteristicValueUpdated(object? o, CharacteristicUpdatedEventArgs characteristicUpdatedEventArgs)
-    {
-    }
+    #endregion
+
+    #region Commands
 
     [ICommand]
     private async void ScanDevicesPeriodically(CancellationToken cancellationToken)
@@ -89,7 +79,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
 
             try
             {
-                await Task.Delay(5_000, cancellationToken);
+                await Task.Delay(10_000, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -98,14 +88,13 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         }
     }
 
-
     [ICommand]
     private async Task SendMessageAsync(CancellationToken cancellationToken)
     {
         IsSendingMessage = true;
         try
         {
-            if (NewMessage is null) return;
+            if (string.IsNullOrWhiteSpace(NewMessage)) return;
 
             var resultList = await _messagingService.SendToDevicesAsync(Devices, NewMessage);
 
@@ -121,7 +110,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             {
                 Messages?.Add(new MessageModel
                 {
-                    Name = Me,
+                    Name = "Me",
                     Content = NewMessage,
                     IsIncoming = false,
                     IsSystemMessage = false,
@@ -142,26 +131,33 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         }
     }
 
+    #endregion
+
+    #region Bluetooth Scanning
+
     private async Task ScanDevices(CancellationToken cancellationToken)
     {
-        _adapter.DeviceDiscovered -= OnDeviceDiscovered;
-        _adapter.DeviceDiscovered += OnDeviceDiscovered;
-
         await _adapter.StartScanningForDevicesAsync(new ScanFilterOptions
             {
                 ServiceUuids = [MyUuidSecure]
-            }, cancellationToken: cancellationToken)
+            }, 
+                cancellationToken: cancellationToken)
             .ConfigureAwait(false);
     }
+
+    #endregion
+
+    #region Event Handlers
 
     private async void OnDeviceDisconnected(object? sender, DeviceEventArgs e)
     {
         var disconnectedDevice = e.Device;
-        if (disconnectedDevice.State is not DeviceState.Connecting or DeviceState.Connected)
+        if (disconnectedDevice.State is not DeviceState.Connected)
         {
+            await _adapter.DisconnectDeviceAsync(disconnectedDevice);
             Devices.Remove(disconnectedDevice);
             _deviceMessageBuffers.TryRemove(GuidHelper.GuidToMacAddress(disconnectedDevice.Id),
-                out _); // Cleanup buffer
+                out _);
         }
 
         await MainThread.InvokeOnMainThreadAsync(() =>
@@ -169,17 +165,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             Messages?.Add(new MessageModel
             {
                 Name = e.Device.Name,
-                Content = $"{string.Join(",", Devices.Select(x=>x.Id))}",
-                IsSystemMessage = true,
-                IsIncoming = null,
-                Timestamp = null,
-                IsAvatarVisible = false
-            });
-            
-            Messages?.Add(new MessageModel
-            {
-                Name = e.Device.Name,
-                Content = $"{disconnectedDevice.Name} {GetRandomRemark(DisconnectedAlternatives)}.",
+                Content = $"{disconnectedDevice.Name} {GetRandomRemark(ChatHelper.DisconnectedAlternatives)}.",
                 IsSystemMessage = true,
                 IsIncoming = null,
                 Timestamp = null,
@@ -208,17 +194,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
                 Messages?.Add(new MessageModel
                 {
                     Name = device.Name,
-                    Content = $"{string.Join(",", Devices.Select(x=>x.Id))}",
-                    IsSystemMessage = true,
-                    IsIncoming = null,
-                    Timestamp = null,
-                    IsAvatarVisible = false
-                });
-                
-                Messages?.Add(new MessageModel
-                {
-                    Name = device.Name,
-                    Content = $"{device.Name} {GetRandomRemark(ConnectedAlternatives)}.",
+                    Content = $"{device.Name} {GetRandomRemark(ChatHelper.ConnectedAlternatives)}.",
                     IsSystemMessage = true,
                     IsIncoming = null,
                     Timestamp = null,
@@ -232,19 +208,11 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         }
     }
 
-    private static string GetRandomRemark(List<string> list)
-    {
-        var random = new Random();
-        var randomValue = random.Next(0, list.Count);
-        return list[randomValue];
-    }
-
-
     private async void OnMessageReceived(string message, string deviceAddress)
     {
         try
         {
-            var endMark = "^";
+            const string endMark = "^";
 
             if (!_deviceMessageBuffers.TryGetValue(deviceAddress, out var value))
             {
@@ -266,16 +234,6 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
                 Messages?.Add(new MessageModel
                 {
                     Name = device?.Name,
-                    Content = $"{string.Join(",", Devices.Select(x=>x.Id))}",
-                    IsSystemMessage = true,
-                    IsIncoming = null,
-                    Timestamp = null,
-                    IsAvatarVisible = false
-                });
-                
-                Messages?.Add(new MessageModel
-                {
-                    Name = device?.Name,
                     Content = fullMessage,
                     IsIncoming = true,
                     IsSystemMessage = false,
@@ -290,27 +248,16 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         }
     }
 
-    // private async void Characteristic_ValueUpdated(object sender, CharacteristicUpdatedEventArgs args)
-    // {
-    //     await Toast.Make("WENT TO CHARACTERISTIC METHOD").Show();
-    //     try
-    //     {
-    //         var bytes = args.Characteristic.Value;
-    //         var receivedMessage = Encoding.Default.GetString(bytes);
-    //         var deviceAddress = args.Characteristic.Service.Id.ToString();
-    //
-    //         if (deviceAddress == Device.NativeDevice.ToString())
-    //         {
-    //             Messages.Add(new MessageModel
-    //             {
-    //                 Content = receivedMessage,
-    //                 IsIncoming = true
-    //             });
-    //         }
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         await Toast.Make(e.Message).Show();
-    //     }
-    // }
+    #endregion
+
+    #region Helpers
+
+    private static string GetRandomRemark(List<string> list)
+    {
+        var random = new Random();
+        var randomValue = random.Next(0, list.Count);
+        return list[randomValue];
+    }
+
+    #endregion
 }

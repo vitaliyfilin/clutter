@@ -1,4 +1,5 @@
-﻿using Clutter.Services.Queues;
+﻿using Clutter.Helpers;
+using Clutter.Services.Queues;
 using Plugin.BLE.Abstractions.Contracts;
 using static System.Buffers.ArrayPool<byte>;
 using static System.Text.Encoding;
@@ -19,8 +20,12 @@ public sealed class MessagingService : IMessagingService
         _characteristicQueue = new CharacteristicQueue();
     }
 
-    public async Task<List<(IDevice Device, bool Success, string? ErrorMessage)>> SendToDevicesAsync(
-        HashSet<IDevice> devices, string message)
+    public async Task<List<(
+            IDevice Device,
+            bool Success,
+            string? ErrorMessage)>>
+        SendToDevicesAsync(
+            HashSet<IDevice> devices, string message)
     {
         var taskCompletionSource =
             new TaskCompletionSource<List<(IDevice Device, bool Success, string? ErrorMessage)>>();
@@ -49,8 +54,10 @@ public sealed class MessagingService : IMessagingService
                 await _connectionService.ConnectToDeviceAsync(device);
 
                 var result = await RequestMtuAsync(device, MaxBleMtuSize);
+                await ToastHelper.ShowInfoToast($"Requested MTU: {result}");
 
                 await SendAsync(result, message);
+                await ToastHelper.ShowInfoToast($"Message sent to: {device.Name}");
 
                 success = true;
             }

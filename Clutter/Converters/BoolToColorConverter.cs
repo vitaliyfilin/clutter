@@ -8,7 +8,7 @@ public sealed class BoolToColorConverter : IValueConverter
     {
         if (value is bool isIncoming)
         {
-            return isIncoming ? Color.Parse("#FF6347") : Color.Parse("#0F0EF9");
+            return isIncoming ? Color.Parse("#343145") : Color.Parse("#1B55FC");
         }
 
         return Colors.Transparent;

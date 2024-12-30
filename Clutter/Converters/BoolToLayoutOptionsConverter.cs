@@ -8,11 +8,10 @@ public sealed class BoolToLayoutOptionsConverter : IValueConverter
     {
         if (value is bool isIncoming)
         {
-            // If incoming, align to the left (Start). Otherwise, align to the right (End).
             return isIncoming ? LayoutOptions.Start : LayoutOptions.End;
         }
 
-        return LayoutOptions.Center; // Default to Start if the value is not a bool
+        return LayoutOptions.Center;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter,

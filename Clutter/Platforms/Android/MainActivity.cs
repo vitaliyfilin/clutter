@@ -16,20 +16,20 @@ public class MainActivity : MauiAppCompatActivity
 {
     private readonly string[] _permissions =
     {
-        Manifest.Permission.Bluetooth, // Required for Bluetooth operations
-        Manifest.Permission.BluetoothAdmin, // Required for managing Bluetooth devices
-        Manifest.Permission.BluetoothPrivileged, // Required for managing Bluetooth devices
+        Manifest.Permission.Bluetooth, 
+        Manifest.Permission.BluetoothAdmin, 
+        Manifest.Permission.BluetoothPrivileged,
 
         // Android 12+ (API level 31+)
 #pragma warning disable CA1416
-        Manifest.Permission.BluetoothScan, // Required for Bluetooth scanning
-        Manifest.Permission.BluetoothConnect, // Required for Bluetooth connections
-        Manifest.Permission.BluetoothAdvertise, // Required for Bluetooth advertising
+        Manifest.Permission.BluetoothScan, 
+        Manifest.Permission.BluetoothConnect, 
+        Manifest.Permission.BluetoothAdvertise, 
 #pragma warning restore CA1416
 
         // Pre-Android 12 (API level < 31)
-        Manifest.Permission.AccessCoarseLocation, // Required for Bluetooth scanning on older devices
-        Manifest.Permission.AccessFineLocation, // Required for Bluetooth scanning on older devices
+        Manifest.Permission.AccessCoarseLocation, 
+        Manifest.Permission.AccessFineLocation,
     };
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -41,7 +41,7 @@ public class MainActivity : MauiAppCompatActivity
         // Make the navigation bar transparent
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
         {
-            Window.SetNavigationBarColor(Color.ParseColor("#000000"));
+            Window?.SetNavigationBarColor(Color.ParseColor("#000000"));
         }
 
         // Remove Entry control underline
@@ -60,12 +60,10 @@ public class MainActivity : MauiAppCompatActivity
         {
             switch (Build.VERSION.SdkInt)
             {
-                // Skip location permissions for Android 12+
 #pragma warning disable CA1416
                 case >= BuildVersionCodes.S when
                     permission is Manifest.Permission.AccessCoarseLocation or Manifest.Permission.AccessFineLocation:
                     continue;
-                // Handle Bluetooth permissions on Android 12+
                 case >= BuildVersionCodes.S:
                 {
                     // Check for the BluetoothConnect permission specifically for Android 12+

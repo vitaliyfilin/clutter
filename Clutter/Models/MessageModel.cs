@@ -1,6 +1,6 @@
 ﻿namespace Clutter.Models;
 
-public class MessageModel
+public sealed record MessageModel
 {
     public string? Name { get; set; }
     public string? Content { get; set; }

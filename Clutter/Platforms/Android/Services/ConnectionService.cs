@@ -1,24 +1,21 @@
-﻿using Plugin.BLE.Abstractions;
+﻿using Clutter.Helpers;
 using Plugin.BLE.Abstractions.Contracts;
+using Plugin.BLE.Abstractions.Exceptions;
 using static Plugin.BLE.CrossBluetoothLE;
 
 namespace Clutter.Services;
 
 public class ConnectionService : IConnectionService
 {
-    private readonly IAdapter _adapter;
+    private readonly IAdapter _adapter = Current.Adapter;
     public ICharacteristic? ChatCharacteristic { get; set; }
-
-    public ConnectionService()
-    {
-        _adapter = Current.Adapter;
-    }
 
     public async Task ConnectToDeviceAsync(IDevice device)
     {
         if (!CheckDevice(device)) return;
         try
         {
+            await ToastHelper.ShowInfoToast($"Connecting to device {device.Name}");
             await _adapter.ConnectToDeviceAsync(device);
 
             var services = await device.GetServicesAsync();
@@ -35,9 +32,13 @@ public class ConnectionService : IConnectionService
                 }
             }
         }
-        catch (Exception e)
+        catch (DeviceConnectionException e)
         {
-            Console.WriteLine($"Exception: {e}, {e.Message}");
+            await ToastHelper.ShowExceptionToast(e);
+        }
+        catch (ArgumentNullException e)
+        {
+            await ToastHelper.ShowExceptionToast(e);
         }
     }
 
@@ -45,8 +46,6 @@ public class ConnectionService : IConnectionService
     {
         if (device.Name is null) return false;
         if (string.Empty.Equals(device.Name)) return false;
-        if (!device.IsConnectable || !device.SupportsIsConnectable) return false;
-        if (device.State is DeviceState.Connected or DeviceState.Connecting) return false;
         if (_adapter.ConnectedDevices.Any(d => d.Id == device.Id)) return false;
         return !string.IsNullOrWhiteSpace(device.Name);
     }

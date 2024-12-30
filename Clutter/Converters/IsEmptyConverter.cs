@@ -2,12 +2,12 @@
 
 namespace Clutter.Converters;
 
-public class IsEmptyConverter : IValueConverter
+public sealed class IsEmptyConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var text = value as string;
-        return string.IsNullOrWhiteSpace(text); // Returns true if empty
+        return string.IsNullOrWhiteSpace(text);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

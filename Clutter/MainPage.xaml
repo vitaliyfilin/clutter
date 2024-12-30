@@ -1,66 +1,65 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="Clutter.MainPage"
              NavigationPage.HasNavigationBar="False"
              BackgroundColor="Black">
-    
+
     <ContentPage.Behaviors>
         <toolkit:StatusBarBehavior StatusBarColor="Black" StatusBarStyle="LightContent" />
     </ContentPage.Behaviors>
 
     <ContentPage.Content>
         <Grid x:Name="ExplosionGrid" VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand">
-        <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center">
+            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center">
 
-            <Label 
-                x:Name="ClutterLabel"
-                Text="clutter" 
-                FontSize="60" 
-                FontFamily="RubikBeastly"
-                TextColor="#B53B27" 
-                HorizontalOptions="Center"
-                VerticalOptions="Center" />
+                <Label
+                    x:Name="ClutterLabel"
+                    Text="clutter"
+                    FontSize="60"
+                    FontFamily="RubikBeastly"
+                    TextColor="#B53B27"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center" />
 
-            <Frame
-                BackgroundColor="Transparent"
-                x:Name="ButtonFrame"
-                HeightRequest="50"
-                WidthRequest="200"
-                BorderColor="Transparent"
-                CornerRadius="30"
-                Padding="0"
-                Margin="0,20,0,0"
-                HasShadow="False"
-                HorizontalOptions="Center">
-                <Frame.Background>
-                    <LinearGradientBrush x:Name="ShinyGradient">
-                        <GradientStop Color="#0F0EF9" Offset="0.0" />
-                        <GradientStop Color="#941FFF" Offset="0.2" />
-                        <GradientStop Color="#00C2D8" Offset="0.3" />
-                        <GradientStop Color="#DCFF3D" Offset="0.4" />
-                        <GradientStop Color="#FD4EDE" Offset="0.5" />
-                        <GradientStop Color="#FF00FF" Offset="0.6" />
-                        <GradientStop Color="#FF4500" Offset="0.7" />
-                        <GradientStop Color="#32CD32" Offset="0.8" />
-                        <GradientStop Color="#FF6600" Offset="1.0" />
-                    </LinearGradientBrush>
-                </Frame.Background>
-                <Button
-                    Text="go online" 
-                    x:Name="OnlineButton"
-                    TextColor="Black"
-                    FontFamily="Rubik"
+                <Frame
+                    BackgroundColor="Transparent"
+                    x:Name="ButtonFrame"
+                    HeightRequest="50"
+                    WidthRequest="200"
                     BorderColor="Transparent"
-                    BackgroundColor="Transparent" 
                     CornerRadius="30"
-                    Clicked="OnGoOnlineClicked"
-                    HorizontalOptions="Fill" 
-                    VerticalOptions="Fill" />
-            </Frame>
-        </VerticalStackLayout>
+                    Padding="0"
+                    Margin="0,20,0,0"
+                    HasShadow="False"
+                    HorizontalOptions="Center">
+                    <Frame.Background>
+                        <LinearGradientBrush x:Name="ShinyGradient">
+                            <GradientStop Color="#0F0EF9" Offset="0.0" />
+                            <GradientStop Color="#941FFF" Offset="0.2" />
+                            <GradientStop Color="#00C2D8" Offset="0.3" />
+                            <GradientStop Color="#DCFF3D" Offset="0.4" />
+                            <GradientStop Color="#0F0EF9" Offset="0.5" />
+                            <GradientStop Color="#941FFF" Offset="0.6" />
+                            <GradientStop Color="#FF4500" Offset="0.7" />
+                            <GradientStop Color="#32CD32" Offset="0.8" />
+                            <GradientStop Color="#FF6600" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Frame.Background>
+                    <Button
+                        Text="go online"
+                        x:Name="OnlineButton"
+                        TextColor="Black"
+                        FontFamily="Rubik"
+                        BorderColor="Transparent"
+                        BackgroundColor="Transparent"
+                        CornerRadius="30"
+                        Clicked="OnGoOnlineClicked"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill" />
+                </Frame>
+            </VerticalStackLayout>
         </Grid>
     </ContentPage.Content>
 </ContentPage>
