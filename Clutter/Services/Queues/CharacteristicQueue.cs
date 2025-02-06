@@ -5,7 +5,7 @@ namespace Clutter.Services.Queues;
 public sealed class CharacteristicQueue
 {
     private readonly ConcurrentQueue<Func<Task>> _requestQueue = new();
-    private readonly SemaphoreSlim _queueSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _queueSemaphore = new(initialCount: 1, maxCount: 1);
 
     public async Task EnqueueRequest(Func<Task> request)
     {

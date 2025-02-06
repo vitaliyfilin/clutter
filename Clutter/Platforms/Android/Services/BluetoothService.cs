@@ -32,6 +32,8 @@ public sealed class BluetoothService : IBluetoothService
 
     public BluetoothService()
     {
+        StopAdvertisingAndDispose();
+
         _bluetoothManager = (BluetoothManager)Application.Context.GetSystemService(Context.BluetoothService)!;
         _gattServerCallback = new GattServerCallback(bluetoothService: this);
 
@@ -52,10 +54,10 @@ public sealed class BluetoothService : IBluetoothService
 
     public async void StartAdvertising()
     {
-        await Task.Delay(5_000);
-
         var bluetoothAdapter = _bluetoothManager?.Adapter;
         _bluetoothLeAdvertiser = bluetoothAdapter?.BluetoothLeAdvertiser;
+
+        bluetoothAdapter?.SetName("Daria");
 
         var advertisementData = new AdvertiseData.Builder()
             .AddServiceUuid(new ParcelUuid(ChatServiceUuid))
@@ -69,6 +71,31 @@ public sealed class BluetoothService : IBluetoothService
             ?.Build();
 
         _bluetoothLeAdvertiser?.StartAdvertising(settings, advertisementData, new MyAdvertiseCallback());
+        await Task.CompletedTask;
+    }
+
+
+    public void StopAdvertisingAndDispose()
+    {
+        try
+        {
+            // Stop advertising
+            _bluetoothLeAdvertiser?.StopAdvertising(new MyAdvertiseCallback());
+
+            // Close the GATT server
+            _bluetoothGattServer?.ClearServices();
+            _bluetoothGattServer?.Close();
+
+            // Nullify the references to allow garbage collection
+            _bluetoothGattServer = null;
+            _bluetoothGattCharacteristic = null;
+            _bluetoothGattService = null;
+            _bluetoothLeAdvertiser = null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during Bluetooth cleanup: {ex.Message}");
+        }
     }
 
     public List<string?> GetConnectedDevices()
@@ -79,44 +106,35 @@ public sealed class BluetoothService : IBluetoothService
     }
 
     // GATT server callback to handle incoming write requests and notifications
-    private sealed class GattServerCallback(BluetoothService bluetoothService) : BluetoothGattServerCallback
+    private sealed class GattServerCallback : BluetoothGattServerCallback
     {
-        private readonly HashSet<BluetoothDevice> _connectedDevices = [];
+        private readonly BluetoothService _bluetoothService;
+        private readonly HashSet<BluetoothDevice> _connectedDevices = []; // Track connected devices
         public IEnumerable<BluetoothDevice> ConnectedDevices => _connectedDevices;
 
-        public override void OnConnectionStateChange(BluetoothDevice? device, ProfileState status,
+        public GattServerCallback(BluetoothService bluetoothService)
+        {
+            _bluetoothService = bluetoothService;
+        }
+
+        public override void OnConnectionStateChange(
+            BluetoothDevice? device,
+            ProfileState status,
             ProfileState newState)
         {
-            switch (newState)
+            if (newState == ProfileState.Connected)
             {
-                case ProfileState.Connected:
+                _connectedDevices.Add(device);
+                // Initialize message list for the connected device
+                if (!_bluetoothService._deviceMessages.ContainsKey(device.Address))
                 {
-                    if (device != null)
-                    {
-                        _connectedDevices.Add(device);
-                        if (device.Address != null && !bluetoothService._deviceMessages.ContainsKey(device.Address))
-                        {
-                            bluetoothService._deviceMessages[device.Address] = [];
-                        }
-                    }
-
-                    break;
+                    _bluetoothService._deviceMessages[device.Address] = new List<string>();
                 }
-                
-                case ProfileState.Disconnected:
-                    if (device != null)
-                    {
-                        _connectedDevices.Remove(device);
-                        if (device.Address != null)
-                            bluetoothService._deviceMessages.Remove(device.Address); 
-                    }
-                    break;
-                case ProfileState.Connecting:
-                    break;
-                case ProfileState.Disconnecting:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
+            }
+            else if (newState == ProfileState.Disconnected)
+            {
+                _connectedDevices.Remove(device);
+                _bluetoothService._deviceMessages.Remove(device.Address); // Clean up message history
             }
         }
 
@@ -129,33 +147,36 @@ public sealed class BluetoothService : IBluetoothService
             int offset,
             byte[]? value)
         {
-            if (characteristic?.Uuid != ChatCharacteristicUuid || device == null || value == null ||
-                device.Name is null || string.IsNullOrWhiteSpace(device.Name) || device.Address is null ||
-                string.IsNullOrWhiteSpace(device.Address))
-                return;
-
-            var receivedMessage = Encoding.UTF8.GetString(value);
-
-            if (bluetoothService._deviceMessages.TryGetValue(device.Address, out var message))
+            try
             {
-                message.Add(receivedMessage);
-            }
+                if (characteristic?.Uuid != ChatCharacteristicUuid || device == null || value == null)
+                    return;
 
-            bluetoothService.MessageReceived?.Invoke(receivedMessage, device.Address);
+                var receivedMessage = Encoding.UTF8.GetString(value);
 
-            var targetDevice = _connectedDevices.FirstOrDefault(d => d.Address != device.Address);
-            if (targetDevice != null)
-            {
+                // Notify UI or relevant listeners
+                _bluetoothService.MessageReceived?.Invoke(receivedMessage, device.Address);
+
+                // Broadcast message to all connected devices except the sender
+                foreach (var targetDevice in _connectedDevices)
+                {
+                    if (targetDevice.Address == device.Address) continue; // Skip the sender
 #pragma warning disable CA1422
-                characteristic?.SetValue(value);
-                bluetoothService._bluetoothGattServer?.NotifyCharacteristicChanged(targetDevice, characteristic,
-                    false);
+                    characteristic?.SetValue(value);
+                    _bluetoothService._bluetoothGattServer?.NotifyCharacteristicChanged(targetDevice, characteristic,
+                        false);
 #pragma warning restore CA1422
-            }
+                }
 
-            if (responseNeeded)
+                if (responseNeeded)
+                {
+                    _bluetoothService._bluetoothGattServer?.SendResponse(device, requestId, GattStatus.Success, 0,
+                        value);
+                }
+            }
+            catch (Exception ex)
             {
-                bluetoothService._bluetoothGattServer?.SendResponse(device, requestId, GattStatus.Success, 0, value);
+                Console.WriteLine($"Error: {ex.Message}");
             }
         }
     }

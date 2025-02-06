@@ -8,15 +8,17 @@ namespace Clutter;
 
 public sealed partial class ChatPage
 {
-    public ChatPage(IBluetoothService bluetoothService, IConnectionService connectionService,
-        IMessagingService messagingService, ISoundService soundService)
+    public ChatPage(IBluetoothService bluetoothService, 
+        IConnectionService connectionService,
+        IMessagingService messagingService, 
+        ISoundService soundService)
     {
         InitializeComponent();
 
         var viewModel = new ChatPageViewModel(bluetoothService, connectionService, messagingService, soundService);
         BindingContext = viewModel;
 
-        if (viewModel.Messages != null) viewModel.Messages.CollectionChanged += Messages_CollectionChanged;
+        if (viewModel.Messages is not null) viewModel.Messages.CollectionChanged += Messages_CollectionChanged;
     }
 
     private void Messages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
