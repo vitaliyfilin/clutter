@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
-using Android.Content;
 using Android.Media;
-using Application = Android.App.Application;
 
 namespace Clutter.Services;
 
@@ -35,8 +33,8 @@ public sealed class SoundService : ISoundService
 
             mediaPlayer.Prepare();
 
-             mediaPlayer.Start();
-             
+            mediaPlayer.Start();
+
             mediaPlayer.Completion += (_, _) =>
             {
                 mediaPlayer.Release();

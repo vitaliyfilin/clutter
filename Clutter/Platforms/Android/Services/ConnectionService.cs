@@ -5,7 +5,7 @@ using static Plugin.BLE.CrossBluetoothLE;
 
 namespace Clutter.Services;
 
-public class ConnectionService : IConnectionService
+public sealed class ConnectionService : IConnectionService
 {
     private readonly IAdapter _adapter = Current.Adapter;
     public ICharacteristic? ChatCharacteristic { get; set; }

@@ -112,7 +112,7 @@ public sealed class BluetoothService : IBluetoothService
             Console.WriteLine($"Error during Bluetooth cleanup: {ex.Message}");
         }
     }
-    
+
     public List<string?> GetConnectedDevices()
     {
         return _gattServerCallback.ConnectedDevices
