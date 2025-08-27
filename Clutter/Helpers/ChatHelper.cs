@@ -9,7 +9,7 @@ public static class ChatHelper
         "Beamed into our orbit",
         "Tapped into the collective",
         "Stepped into the void",
-        "Wandered into the party",
+        "Wandered into the party"
     ];
 
     public static readonly List<string> DisconnectedAlternatives =
@@ -19,6 +19,6 @@ public static class ChatHelper
         "Pulled the plug on the fun",
         "Left without leaving a forwarding address",
         "Evacuated the chat premises",
-        "Took an unannounced leave of absence",
+        "Took an unannounced leave of absence"
     ];
 }

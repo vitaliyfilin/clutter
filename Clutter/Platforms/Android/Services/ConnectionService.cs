@@ -15,7 +15,7 @@ public class ConnectionService : IConnectionService
         if (!CheckDevice(device)) return;
         try
         {
-            await ToastHelper.ShowInfoToast($"Connecting to device {device.Name}");
+            await ToastHelper.ShowInfoToast($"Connecting to device {device.Name ?? "Unknown"}");
             await _adapter.ConnectToDeviceAsync(device);
 
             var services = await device.GetServicesAsync();
@@ -27,7 +27,6 @@ public class ConnectionService : IConnectionService
                     if (!characteristic.CanWrite || !characteristic.CanUpdate) continue;
 
                     ChatCharacteristic = characteristic;
-
                     await ChatCharacteristic.StartUpdatesAsync();
                 }
             }
@@ -44,9 +43,11 @@ public class ConnectionService : IConnectionService
 
     private bool CheckDevice(IDevice device)
     {
-        if (device.Name is null) return false;
-        if (string.Empty.Equals(device.Name)) return false;
-        if (_adapter.ConnectedDevices.Any(d => d.Id == device.Id)) return false;
-        return !string.IsNullOrWhiteSpace(device.Name);
+        // NOTE: Previously we were requiring a non-null, non-empty Name.
+        // However, after an app restart the discovered device may have a null Name even though it advertises the proper service.
+        // Removing the Name check lets us connect to valid devices even when the Name isn’t immediately available.
+        if (_adapter.ConnectedDevices.Any(d => d.Id == device.Id))
+            return false;
+        return true;
     }
 }

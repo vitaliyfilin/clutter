@@ -2,7 +2,7 @@
 
 namespace Clutter;
 
-public sealed partial class MainPage : ContentPage
+public sealed partial class MainPage
 {
     private const int Length = 500;
 
@@ -19,7 +19,9 @@ public sealed partial class MainPage : ContentPage
         IsBusy = true;
     }
 
+#pragma warning disable CA1822
     private async Task FallAsync()
+#pragma warning restore CA1822
     {
         await Task.WhenAll(
             ClutterLabel.TranslateTo(0, Height, Length, Easing.CubicIn),

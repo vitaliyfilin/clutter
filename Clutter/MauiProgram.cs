@@ -4,7 +4,6 @@ using Clutter.ViewModels;
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using Plugin.BLE;
-using Plugin.BLE.Abstractions.Contracts;
 
 namespace Clutter;
 
@@ -30,8 +29,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IBluetoothService, BluetoothService>();
         builder.Services.AddSingleton<IMessagingService, MessagingService>();
         builder.Services.AddSingleton<IConnectionService, ConnectionService>();
-        builder.Services.AddSingleton<IBluetoothLE>(CrossBluetoothLE.Current);
-        builder.Services.AddSingleton<IAdapter>(CrossBluetoothLE.Current.Adapter);
+        builder.Services.AddSingleton(CrossBluetoothLE.Current);
+        builder.Services.AddSingleton(CrossBluetoothLE.Current.Adapter);
         builder.Services.AddSingleton<ISoundService, SoundService>();
 
         var app = builder.Build();

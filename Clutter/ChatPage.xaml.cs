@@ -8,9 +8,9 @@ namespace Clutter;
 
 public sealed partial class ChatPage
 {
-    public ChatPage(IBluetoothService bluetoothService, 
+    public ChatPage(IBluetoothService bluetoothService,
         IConnectionService connectionService,
-        IMessagingService messagingService, 
+        IMessagingService messagingService,
         ISoundService soundService)
     {
         InitializeComponent();

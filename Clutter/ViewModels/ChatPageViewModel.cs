@@ -38,8 +38,8 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
     #region Constructor
 
     public ChatPageViewModel(
-        IBluetoothService bluetoothService, 
-        IConnectionService connectionService, 
+        IBluetoothService bluetoothService,
+        IConnectionService connectionService,
         IMessagingService messagingService,
         ISoundService soundService)
     {
@@ -50,7 +50,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
         _messagingService = messagingService;
         _soundService = soundService;
         _adapter = Current.Adapter;
-        
+
         _bluetoothService.MessageReceived += OnMessageReceived;
         _adapter.DeviceDisconnected += OnDeviceDisconnected;
         _adapter.DeviceConnectionLost += OnDeviceDisconnected;
@@ -138,9 +138,9 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
     private async Task ScanDevices(CancellationToken cancellationToken)
     {
         await _adapter.StartScanningForDevicesAsync(new ScanFilterOptions
-            {
-                ServiceUuids = [MyUuidSecure]
-            }, 
+                {
+                    ServiceUuids = [MyUuidSecure]
+                },
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
     }
@@ -177,7 +177,17 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
     private async void OnDeviceDiscovered(object? sender, DeviceEventArgs args)
     {
         var device = args.Device;
-        if (Devices.Any(d => d.Id == device.Id)) return;
+
+        // First, if this device is already connected via our peripheral role,
+        // skip trying to connect as a client.
+        // (GuidHelper.GuidToMacAddress converts the Plugin.BLE device Id into the same string
+        // format used in our BluetoothService.)
+        if (_bluetoothService.GetConnectedDevices().Contains(GuidHelper.GuidToMacAddress(device.Id)))
+            return;
+
+        // Also, if we already have it in our Devices set, skip.
+        if (Devices.Any(d => d.Id == device.Id))
+            return;
 
         try
         {
@@ -187,6 +197,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
                 Devices.Add(device);
             }
 
+            // (Additional code for sound/notification remains unchanged)
             await _soundService.PlayDiscoveredSoundAsync();
 
             await MainThread.InvokeOnMainThreadAsync(() =>
@@ -207,6 +218,7 @@ public sealed partial class ChatPageViewModel : BasePageViewModel
             Console.WriteLine($"Failed to connect to discovered device: {ex.Message}");
         }
     }
+
 
     private async void OnMessageReceived(string message, string deviceAddress)
     {

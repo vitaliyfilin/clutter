@@ -13,11 +13,8 @@ public sealed class BluetoothService : IBluetoothService
     private const GattProperty Properties = GattProperty.Read | GattProperty.Write | GattProperty.Notify;
     private const GattPermission Permissions = GattPermission.Read | GattPermission.Write;
 
-    private static readonly UUID?
-        ChatServiceUuid = UUID.FromString("fa87c0d0-afac-11de-8a39-0800200c9a66");
-
-    private static readonly UUID?
-        ChatCharacteristicUuid = UUID.FromString("fa87c0d1-afac-11de-8a39-0800200c9a66");
+    private static readonly UUID? ChatServiceUuid = UUID.FromString("fa87c0d0-afac-11de-8a39-0800200c9a66");
+    private static readonly UUID? ChatCharacteristicUuid = UUID.FromString("fa87c0d1-afac-11de-8a39-0800200c9a66");
 
     public event Action<string, string>? MessageReceived;
     private readonly GattServerCallback _gattServerCallback;
@@ -28,14 +25,16 @@ public sealed class BluetoothService : IBluetoothService
     private BluetoothLeAdvertiser? _bluetoothLeAdvertiser;
     private BluetoothGattServer? _bluetoothGattServer;
 
-    private readonly Dictionary<string, List<string>> _deviceMessages = new();
+    // Store the advertise callback instance so we can properly stop advertising later.
+    private MyAdvertiseCallback? _advertiseCallback;
 
     public BluetoothService()
     {
+        // Clean up any previous advertising/gatt resources.
         StopAdvertisingAndDispose();
 
         _bluetoothManager = (BluetoothManager)Application.Context.GetSystemService(Context.BluetoothService)!;
-        _gattServerCallback = new GattServerCallback(bluetoothService: this);
+        _gattServerCallback = new GattServerCallback(this);
 
         InitializeGattServer();
         StartAdvertising();
@@ -43,10 +42,13 @@ public sealed class BluetoothService : IBluetoothService
 
     private void InitializeGattServer()
     {
-        _bluetoothGattServer = _bluetoothManager?.OpenGattServer(Application.Context, new GattServerCallback(this));
+        // Use the stored _gattServerCallback instance instead of creating a new one.
+        _bluetoothGattServer = _bluetoothManager?.OpenGattServer(Application.Context, _gattServerCallback);
         _bluetoothGattService = new BluetoothGattService(ChatServiceUuid, GattServiceType.Primary);
-        _bluetoothGattCharacteristic =
-            new BluetoothGattCharacteristic(ChatCharacteristicUuid, properties: Properties, permissions: Permissions);
+        _bluetoothGattCharacteristic = new BluetoothGattCharacteristic(
+            ChatCharacteristicUuid,
+            properties: Properties,
+            permissions: Permissions);
 
         _bluetoothGattService.AddCharacteristic(_bluetoothGattCharacteristic);
         _bluetoothGattServer?.AddService(_bluetoothGattService);
@@ -57,47 +59,60 @@ public sealed class BluetoothService : IBluetoothService
         var bluetoothAdapter = _bluetoothManager?.Adapter;
         _bluetoothLeAdvertiser = bluetoothAdapter?.BluetoothLeAdvertiser;
 
-        bluetoothAdapter?.SetName("Daria");
+        bluetoothAdapter?.SetName(Build.Model); // Use device model name instead of hardcoded value
 
         var advertisementData = new AdvertiseData.Builder()
             .AddServiceUuid(new ParcelUuid(ChatServiceUuid))
-            ?.SetIncludeDeviceName(true)
-            ?.Build();
+            .SetIncludeDeviceName(true)
+            .Build();
 
         var settings = new AdvertiseSettings.Builder()
             .SetAdvertiseMode(AdvertiseMode.Balanced)
-            ?.SetTxPowerLevel(AdvertiseTx.PowerMedium)
-            ?.SetConnectable(true)
-            ?.Build();
+            .SetTxPowerLevel(AdvertiseTx.PowerMedium)
+            .SetConnectable(true)
+            .Build();
 
-        _bluetoothLeAdvertiser?.StartAdvertising(settings, advertisementData, new MyAdvertiseCallback());
+        // Create and store the callback instance
+        _advertiseCallback = new MyAdvertiseCallback();
+        _bluetoothLeAdvertiser?.StartAdvertising(settings, advertisementData, _advertiseCallback);
+
         await Task.CompletedTask;
     }
-
 
     public void StopAdvertisingAndDispose()
     {
         try
         {
-            // Stop advertising
-            _bluetoothLeAdvertiser?.StopAdvertising(new MyAdvertiseCallback());
+            if (_advertiseCallback != null)
+            {
+                _bluetoothLeAdvertiser?.StopAdvertising(_advertiseCallback);
+            }
 
-            // Close the GATT server
+            // Close existing connections before disposing
+            var connectedDevices = _gattServerCallback?.ConnectedDevices.ToList();
+            if (connectedDevices != null)
+            {
+                foreach (var device in connectedDevices)
+                {
+                    _bluetoothGattServer?.CancelConnection(device);
+                }
+            }
+
             _bluetoothGattServer?.ClearServices();
             _bluetoothGattServer?.Close();
 
-            // Nullify the references to allow garbage collection
             _bluetoothGattServer = null;
             _bluetoothGattCharacteristic = null;
             _bluetoothGattService = null;
             _bluetoothLeAdvertiser = null;
+            _advertiseCallback = null;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error during Bluetooth cleanup: {ex.Message}");
         }
     }
-
+    
     public List<string?> GetConnectedDevices()
     {
         return _gattServerCallback.ConnectedDevices
@@ -109,7 +124,7 @@ public sealed class BluetoothService : IBluetoothService
     private sealed class GattServerCallback : BluetoothGattServerCallback
     {
         private readonly BluetoothService _bluetoothService;
-        private readonly HashSet<BluetoothDevice> _connectedDevices = []; // Track connected devices
+        private readonly HashSet<BluetoothDevice> _connectedDevices = new();
         public IEnumerable<BluetoothDevice> ConnectedDevices => _connectedDevices;
 
         public GattServerCallback(BluetoothService bluetoothService)
@@ -122,6 +137,8 @@ public sealed class BluetoothService : IBluetoothService
             ProfileState status,
             ProfileState newState)
         {
+            if (device == null) return;
+
             if (newState == ProfileState.Connected)
             {
                 _connectedDevices.Add(device);
@@ -162,7 +179,7 @@ public sealed class BluetoothService : IBluetoothService
                 {
                     if (targetDevice.Address == device.Address) continue; // Skip the sender
 #pragma warning disable CA1422
-                    characteristic?.SetValue(value);
+                    characteristic.SetValue(value);
                     _bluetoothService._bluetoothGattServer?.NotifyCharacteristicChanged(targetDevice, characteristic,
                         false);
 #pragma warning restore CA1422
@@ -176,8 +193,11 @@ public sealed class BluetoothService : IBluetoothService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"Error in OnCharacteristicWriteRequest: {ex.Message}");
             }
         }
     }
+
+    // (Assuming _deviceMessages is declared somewhere in BluetoothService; it was used in your original code.)
+    private readonly Dictionary<string, List<string>> _deviceMessages = new();
 }
